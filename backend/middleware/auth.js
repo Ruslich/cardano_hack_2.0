@@ -51,22 +51,16 @@ exports.validateUniversityToken = async (req, res, next) => {
             return res.status(401).json({ error: 'API token is required' });
         }
 
-        // Check if the token is already a hash (64 characters)
-        const tokenHash = apiToken.length === 64 ? apiToken : crypto
-            .createHash('sha256')
-            .update(apiToken)
-            .digest('hex');
+        console.log('Validating token:', apiToken);
 
-        console.log('Validating token hash:', tokenHash);
-
-        // Query to get university details using the hashed API token
+        // Query to get university details using the API token directly
         const [rows] = await pool.execute(`
             SELECT u.*, at.token_hash 
             FROM universities u
             JOIN api_tokens at ON u.id = at.university_id
             WHERE at.token_hash = ?
             AND u.status = 'approved'
-        `, [tokenHash]);
+        `, [apiToken]);
 
         if (rows.length === 0) {
             console.log('Token validation failed: No matching token found');
