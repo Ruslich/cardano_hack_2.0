@@ -6,13 +6,18 @@ const pool = require('../db');
 const fs = require('fs');
 const FormData = require('form-data');
 const fetch = require('node-fetch');
+const { v4: uuidv4 } = require('uuid');
 
 const router = express.Router();
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/');
+    const uploadDir = 'uploads/';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -20,27 +25,15 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
-  },
-  fileFilter: function (req, file, cb) {
-    const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg'];
-    if (!allowedTypes.includes(file.mimetype)) {
-      return cb(new Error('Invalid file type. Only PDF, PNG, and JPG files are allowed.'));
-    }
-    cb(null, true);
-  }
-});
+const upload = multer({ storage: storage });
 
-router.post('/issue-credential', validateUniversityToken, upload.single('document'), async (req, res) => {
-  console.log('Received request:', {
-    file: req.file,
-    university: req.university
-  });
-
+router.post('/', validateUniversityToken, upload.single('document'), async (req, res) => {
   try {
+    console.log('Received request:', {
+      file: req.file,
+      university: req.university
+    });
+
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
@@ -51,44 +44,58 @@ router.post('/issue-credential', validateUniversityToken, upload.single('documen
 
     // Prepare form data for Python service
     const formData = new FormData();
-    formData.append('document', fs.createReadStream(req.file.path));
-    formData.append('studentId', req.body.studentId);
-    formData.append('name', req.body.name);
-    formData.append('universityId', req.university.id);
-    formData.append('universityName', req.university.name);
-    formData.append('walletAddress', req.university.wallet_address);
+    formData.append('file', fs.createReadStream(req.file.path));
+    formData.append('wallet_address', req.university.wallet_address);
 
-    // Send to Python service
-    const pythonResponse = await fetch('http://localhost:8001/upload', {
+    // Call the Python service
+    const pythonServiceUrl = 'http://localhost:8001/upload';
+    const response = await fetch(pythonServiceUrl, {
       method: 'POST',
       body: formData
     });
 
-    if (!pythonResponse.ok) {
-      throw new Error('Failed to process document with Python service');
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to process document with Python service');
     }
 
-    const result = await pythonResponse.json();
+    const result = await response.json();
+    console.log('Python service response:', result);
 
-    // Save NFT information to database
-    const [insertResult] = await pool.execute(
-      'INSERT INTO credentials (university_id, student_id, student_name, document_path, nft_asset_id, transaction_hash) VALUES (?, ?, ?, ?, ?, ?)',
-      [req.university.id, req.body.studentId, req.body.name, req.file.path, result.nft_asset_id, result.transaction_hash]
+    // Generate a temporary transaction hash if none is provided
+    const tempTxHash = result.transaction_hash || `pending_${Date.now()}`;
+
+    // Save credential information to database
+    const [credentialResult] = await pool.execute(
+      `INSERT INTO credentials 
+       (uuid, nft_asset_name, blockchain_tx_hash, file_name, status) 
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        uuidv4(),
+        result.nft_asset_name,
+        tempTxHash,
+        req.file.originalname,
+        result.transaction_hash ? 'completed' : 'pending'
+      ]
     );
 
     // Clean up the uploaded file
     fs.unlinkSync(req.file.path);
 
     res.json({
-      success: true,
+      status: 'success',
       data: {
-        nftAssetId: result.nft_asset_id,
-        transactionHash: result.transaction_hash
+        nftAssetName: result.nft_asset_name,
+        transactionHash: tempTxHash,
+        documentPath: req.file.path,
+        status: result.transaction_hash ? 'completed' : 'pending'
       }
     });
+
   } catch (error) {
     console.error('Error in issue-credential:', error);
     if (req.file) {
+      // Clean up the uploaded file in case of error
       fs.unlinkSync(req.file.path);
     }
     res.status(500).json({ error: error.message });

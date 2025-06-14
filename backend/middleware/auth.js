@@ -44,35 +44,37 @@ exports.authenticateUniversity = async (req, res, next) => {
 };
 
 exports.validateUniversityToken = async (req, res, next) => {
-    try {
-        const apiToken = req.headers['x-api-token'];
-        
-        if (!apiToken) {
-            return res.status(401).json({ error: 'API token is required' });
-        }
+  try {
+    const apiToken = req.headers['x-api-token'];
+    console.log('Validating token:', apiToken);
 
-        console.log('Validating token:', apiToken);
-
-        // Query to get university details using the API token directly
-        const [rows] = await pool.execute(`
-            SELECT u.*, at.token_hash 
-            FROM universities u
-            JOIN api_tokens at ON u.id = at.university_id
-            WHERE at.token_hash = ?
-            AND u.status = 'approved'
-        `, [apiToken]);
-
-        if (rows.length === 0) {
-            console.log('Token validation failed: No matching token found');
-            return res.status(401).json({ error: 'Invalid API token' });
-        }
-
-        console.log('Token validation successful for university:', rows[0].id);
-        // Attach university info to request for use in controllers
-        req.university = rows[0];
-        next();
-    } catch (error) {
-        console.error('Error validating university token:', error);
-        res.status(500).json({ error: 'Authentication failed' });
+    if (!apiToken) {
+      return res.status(401).json({ error: 'API token is required' });
     }
+
+    // Query to get university info using the token
+    const [rows] = await pool.execute(`
+      SELECT u.* 
+      FROM universities u
+      JOIN api_tokens at ON at.university_id = u.id
+      WHERE at.token_hash = ?
+    `, [apiToken]);
+
+    if (rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid API token' });
+    }
+
+    const university = rows[0];
+    if (university.status !== 'approved') {
+      return res.status(403).json({ error: 'University is not approved' });
+    }
+
+    // Attach university info to request
+    req.university = university;
+    console.log('Token validation successful for university:', university.id);
+    next();
+  } catch (err) {
+    console.error('Error in validateUniversityToken:', err);
+    res.status(500).json({ error: 'Failed to validate token' });
+  }
 }; 

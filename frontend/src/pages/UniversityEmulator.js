@@ -3,11 +3,6 @@ import { useNavigate } from 'react-router-dom';
 
 export default function UniversityEmulator() {
   const [loadingStates, setLoadingStates] = useState({});
-  const [showWalletPopup, setShowWalletPopup] = useState(false);
-  const [walletAddress, setWalletAddress] = useState('');
-  const [currentCertificate, setCurrentCertificate] = useState(null);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
 
   // Certificate data with PDF paths
@@ -76,10 +71,16 @@ export default function UniversityEmulator() {
         walletAddress: walletAddress
       }));
 
-      // 3. Simulate API call (replace with actual fetch to your endpoint)
-      console.log('Submitting to API:', {
-        certificate: currentCertificate,
-        walletAddress
+      // Use the hardcoded token
+      const token = '93eba6ca6865c236ca98169d2dec06d40f1d6f4918c9eb7ca96dbb0a804dd963';
+
+      // 3. Make API call to our backend
+      const apiResponse = await fetch('http://localhost:4000/api', {
+        method: 'POST',
+        headers: {
+          'x-api-token': token
+        },
+        body: formData
       });
       await new Promise(resolve => setTimeout(resolve, 1500));
       
@@ -180,11 +181,8 @@ export default function UniversityEmulator() {
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-blue-800">
-            Ingolstadt University of Alchemy
+            University Dashboard
           </h1>
-          <p className="text-blue-600 italic text-sm mt-1">
-            "From leaden ignorance to golden knowledge"
-          </p>
         </div>
         
         <div className="space-y-6">

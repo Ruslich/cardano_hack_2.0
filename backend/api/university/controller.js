@@ -280,4 +280,25 @@ exports.logout = async (req, res) => {
     console.error('Error in logout:', err);
     res.status(500).json({ error: 'Failed to logout', details: err.message });
   }
+};
+
+exports.getUniversityInfo = async (req, res) => {
+  try {
+    // University info is already attached by the validateUniversityToken middleware
+    const university = req.university;
+    
+    if (!university) {
+      return res.status(401).json({ error: 'University not found' });
+    }
+
+    res.json({
+      id: university.id,
+      name: university.name,
+      wallet_address: university.wallet_address,
+      status: university.status
+    });
+  } catch (err) {
+    console.error('Error in getUniversityInfo:', err);
+    res.status(500).json({ error: 'Failed to fetch university info', details: err.message });
+  }
 }; 
