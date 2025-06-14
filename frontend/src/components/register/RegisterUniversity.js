@@ -181,6 +181,14 @@ const RegisterUniversity = () => {
             </button>
           </div>
         )}
+        <div className="mt-8">
+          <div className="w-full border-t border-gray-200 mb-2"></div>
+          <div className="flex justify-center">
+            <a href="/login" className="text-blue-600 font-semibold hover:underline text-lg transition-colors">
+              Already Registered? Login here.
+            </a>
+          </div>
+        </div>
       </div>
     </section>
   );

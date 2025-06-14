@@ -62,4 +62,38 @@ exports.registerUniversity = async (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Registration failed', details: err.message });
   }
+};
+
+exports.loginUniversity = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+    // Find admin by email
+    const [admins] = await pool.execute('SELECT * FROM admins WHERE email = ?', [email]);
+    if (admins.length === 0) {
+      return res.status(401).json({ error: 'Invalid credentials.' });
+    }
+    const admin = admins[0];
+    // Find university
+    const [unis] = await pool.execute('SELECT * FROM universities WHERE id = ?', [admin.university_id]);
+    if (unis.length === 0) {
+      return res.status(401).json({ error: 'University not found.' });
+    }
+    const university = unis[0];
+    if (university.status !== 'approved') {
+      return res.status(403).json({ error: 'Your university registration is pending. You will be notified once approved.' });
+    }
+    // Check password
+    const valid = await bcrypt.compare(password, admin.password_hash);
+    if (!valid) {
+      return res.status(401).json({ error: 'Invalid credentials.' });
+    }
+    // Success
+    res.json({ success: true, admin: { id: admin.id, name: admin.name, email: admin.email, university_id: admin.university_id } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Login failed', details: err.message });
+  }
 }; 

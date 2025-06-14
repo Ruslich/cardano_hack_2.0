@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const { registerUniversity } = require('./controller');
+const { registerUniversity, loginUniversity } = require('./controller');
 
 const router = express.Router();
 
@@ -33,5 +33,7 @@ router.post(
   ]),
   registerUniversity
 );
+
+router.post('/login', loginUniversity);
 
 module.exports = router;
