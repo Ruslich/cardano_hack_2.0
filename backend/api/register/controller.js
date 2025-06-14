@@ -67,33 +67,74 @@ exports.registerUniversity = async (req, res) => {
 exports.loginUniversity = async (req, res) => {
   try {
     const { email, password } = req.body;
+    
+    console.log('Login attempt for email:', email);
+    
+    // Basic validation
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required.' });
     }
+
+    // Sanitize email
+    const sanitizedEmail = email.trim().toLowerCase();
+    
     // Find admin by email
-    const [admins] = await pool.execute('SELECT * FROM admins WHERE email = ?', [email]);
+    const [admins] = await pool.execute('SELECT * FROM admins WHERE email = ?', [sanitizedEmail]);
     if (admins.length === 0) {
+      console.log('Login failed: Admin not found');
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
     const admin = admins[0];
+    
     // Find university
     const [unis] = await pool.execute('SELECT * FROM universities WHERE id = ?', [admin.university_id]);
     if (unis.length === 0) {
+      console.log('Login failed: University not found');
       return res.status(401).json({ error: 'University not found.' });
     }
     const university = unis[0];
+    
     if (university.status !== 'approved') {
+      console.log('Login failed: University not approved');
       return res.status(403).json({ error: 'Your university registration is pending. You will be notified once approved.' });
     }
+    
     // Check password
     const valid = await bcrypt.compare(password, admin.password_hash);
     if (!valid) {
+      console.log('Login failed: Invalid password');
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
-    // Success
-    res.json({ success: true, admin: { id: admin.id, name: admin.name, email: admin.email, university_id: admin.university_id } });
+
+    // Set session
+    req.session.universityId = university.id;
+    req.session.adminId = admin.id;
+    
+    console.log('Session being set:', {
+      sessionID: req.session.id,
+      universityId: university.id,
+      adminId: admin.id
+    });
+    
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error:', err);
+        return res.status(500).json({ error: 'Failed to create session' });
+      }
+      console.log('Session saved successfully');
+      // Success
+      res.json({ 
+        success: true, 
+        admin: { 
+          id: admin.id, 
+          name: admin.name, 
+          email: admin.email, 
+          university_id: admin.university_id 
+        } 
+      });
+    });
   } catch (err) {
-    console.error(err);
+    console.error('Login error:', err);
     res.status(500).json({ error: 'Login failed', details: err.message });
   }
 }; 

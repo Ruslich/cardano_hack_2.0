@@ -19,17 +19,20 @@ const Login = () => {
       const res = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
+        credentials: 'include'
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Login failed');
       setSuccess(true);
-      // Store login state (for demo, use localStorage)
+      
+      // Store login state
       localStorage.setItem('universityAdminLoggedIn', 'true');
       localStorage.setItem('universityAdminName', data.admin.name);
-      setTimeout(() => {
-        navigate('/university/dashboard');
-      }, 1200);
+      localStorage.setItem('universityId', data.admin.university_id);
+      
+      // Navigate immediately after successful login
+      navigate('/university/dashboard');
     } catch (err) {
       setError(err.message || 'Login failed');
     } finally {

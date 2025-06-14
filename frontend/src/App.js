@@ -14,11 +14,14 @@ import RegisterUniversity from './components/register/RegisterUniversity';
 import SuperAdminLogin from './components/super_admin/SuperAdminLogin';
 import SuperAdminDashboard from './components/super_admin/SuperAdminDashboard';
 import Login from './components/register/Login';
+import DeveloperDashboard from './components/university/DeveloperDashboard';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   return (
     <Router>
       <div className="min-h-screen bg-white">
+        <Toaster position="top-right" />
         <Routes>
           <Route path="/" element={
             <>
@@ -48,7 +51,8 @@ function App() {
           <Route path="/register" element={<RegisterUniversity />} />
           <Route path="/super-admin/login" element={<SuperAdminLogin />} />
           <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
-          <Route path="/login" element={<Login />} />
+          <Route path="/university/login" element={<Login />} />
+          <Route path="/university/dashboard" element={<DeveloperDashboard />} />
         </Routes>
       </div>
     </Router>
