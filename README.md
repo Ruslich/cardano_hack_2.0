@@ -52,20 +52,6 @@ We developed a **blockchain-based credential verification platform** where unive
 | Frontend | React (Vite) |
 | Backend | Node.js |
 | File Storage | IPFS (optional for storing diploma PDFs) |
-| Deployment | Vercel / Netlify (frontend), Railway / Render (backend) |
-
----
-
-## 🔄 Project Structure
-
-/client - React frontend (minting, verification UI)
-/server - Node.js backend (NMKR API integration, minting logic)
-/. env - Environment variables (API keys, wallet IDs)
-/docs - (Optional) Documentation files, metadata schemas
-
----
-
-
 
 ---
 
