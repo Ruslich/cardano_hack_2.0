@@ -35,6 +35,17 @@ const DeveloperDashboard = () => {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   const [activeCodeTab, setActiveCodeTab] = useState('node.js');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [mintResult, setMintResult] = useState(null);
+  const [formData, setFormData] = useState({
+    studentId: '',
+    name: '',
+    degree: '',
+    major: '',
+    graduationDate: '',
+    gpa: ''
+  });
   const navigate = useNavigate();
 
   // Mock data for analytics
@@ -140,6 +151,61 @@ const DeveloperDashboard = () => {
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     toast.success('Copied to clipboard!');
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('File size must be less than 10MB');
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
+
+  const handleInputChange = (event) => {
+    const { name, value } = event.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!selectedFile) {
+      toast.error('Please select a file to upload');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('document', selectedFile);
+      Object.keys(formData).forEach(key => {
+        formDataToSend.append(key, formData[key]);
+      });
+
+      const response = await fetch('http://localhost:4000/api/nft/issue-credential', {
+        method: 'POST',
+        credentials: 'include',
+        body: formDataToSend
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to issue credential');
+      }
+
+      const result = await response.json();
+      setMintResult(result.data);
+      toast.success('Credential issued successfully!');
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error(error.message);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   if (loading) {
@@ -648,7 +714,7 @@ const DeveloperDashboard = () => {
                 </p>
               </div>
               <div className="px-6 py-5">
-                <form className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6">
                   {/* File Upload Section */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700">
@@ -663,11 +729,23 @@ const DeveloperDashboard = () => {
                             className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
                           >
                             <span>Upload a file</span>
-                            <input id="file-upload" name="file-upload" type="file" className="sr-only" />
+                            <input
+                              id="file-upload"
+                              name="file-upload"
+                              type="file"
+                              className="sr-only"
+                              onChange={handleFileChange}
+                              accept=".pdf,.png,.jpg,.jpeg"
+                            />
                           </label>
                           <p className="pl-1">or drag and drop</p>
                         </div>
                         <p className="text-xs text-gray-500">PDF, PNG, JPG up to 10MB</p>
+                        {selectedFile && (
+                          <p className="text-sm text-gray-500">
+                            Selected: {selectedFile.name}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -675,15 +753,18 @@ const DeveloperDashboard = () => {
                   {/* Credential Fields */}
                   <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                     <div>
-                      <label htmlFor="student-id" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="studentId" className="block text-sm font-medium text-gray-700">
                         Student ID
                       </label>
                       <input
                         type="text"
-                        name="student-id"
-                        id="student-id"
+                        name="studentId"
+                        id="studentId"
+                        value={formData.studentId}
+                        onChange={handleInputChange}
                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                         placeholder="e.g., 12345"
+                        required
                       />
                     </div>
 
@@ -695,8 +776,11 @@ const DeveloperDashboard = () => {
                         type="text"
                         name="name"
                         id="name"
+                        value={formData.name}
+                        onChange={handleInputChange}
                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                         placeholder="e.g., John Doe"
+                        required
                       />
                     </div>
 
@@ -708,8 +792,11 @@ const DeveloperDashboard = () => {
                         type="text"
                         name="degree"
                         id="degree"
+                        value={formData.degree}
+                        onChange={handleInputChange}
                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                         placeholder="e.g., Bachelor of Science"
+                        required
                       />
                     </div>
 
@@ -721,20 +808,26 @@ const DeveloperDashboard = () => {
                         type="text"
                         name="major"
                         id="major"
+                        value={formData.major}
+                        onChange={handleInputChange}
                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                         placeholder="e.g., Computer Science"
+                        required
                       />
                     </div>
 
                     <div>
-                      <label htmlFor="graduation-date" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="graduationDate" className="block text-sm font-medium text-gray-700">
                         Graduation Date
                       </label>
                       <input
                         type="date"
-                        name="graduation-date"
-                        id="graduation-date"
+                        name="graduationDate"
+                        id="graduationDate"
+                        value={formData.graduationDate}
+                        onChange={handleInputChange}
                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                        required
                       />
                     </div>
 
@@ -746,6 +839,8 @@ const DeveloperDashboard = () => {
                         type="text"
                         name="gpa"
                         id="gpa"
+                        value={formData.gpa}
+                        onChange={handleInputChange}
                         className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                         placeholder="e.g., 3.8"
                       />
@@ -756,49 +851,74 @@ const DeveloperDashboard = () => {
                   <div className="flex justify-end">
                     <button
                       type="submit"
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      disabled={isUploading}
+                      className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
+                        isUploading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
+                      } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
                     >
-                      Issue Credential
+                      {isUploading ? (
+                        <>
+                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Processing...
+                        </>
+                      ) : (
+                        'Issue Credential'
+                      )}
                     </button>
                   </div>
                 </form>
               </div>
             </div>
 
-            {/* Response Section (Initially Hidden) */}
-            <div className="bg-white shadow rounded-lg">
-              <div className="px-6 py-5 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">Response</h3>
-              </div>
-              <div className="px-6 py-5">
-                <div className="rounded-md bg-green-50 p-4">
-                  <div className="flex">
-                    <div className="flex-shrink-0">
-                      <CheckCircle className="h-5 w-5 text-green-400" />
-                    </div>
-                    <div className="ml-3">
-                      <h3 className="text-sm font-medium text-green-800">Credential Issued Successfully</h3>
-                      <div className="mt-2 text-sm text-green-700">
-                        <div className="space-y-2">
-                          <div className="flex items-center">
-                            <span className="font-medium">Transaction Hash:</span>
-                            <code className="ml-2 text-xs bg-green-100 px-2 py-1 rounded">0x1234...5678</code>
-                            <button
-                              onClick={() => copyToClipboard('0x1234...5678')}
-                              className="ml-2 text-green-600 hover:text-green-500"
-                            >
-                              <Copy size={14} />
-                            </button>
-                          </div>
-                          <div className="flex items-center">
-                            <span className="font-medium">NFT ID:</span>
-                            <code className="ml-2 text-xs bg-green-100 px-2 py-1 rounded">NFT#12345</code>
-                            <button
-                              onClick={() => copyToClipboard('NFT#12345')}
-                              className="ml-2 text-green-600 hover:text-green-500"
-                            >
-                              <Copy size={14} />
-                            </button>
+            {/* Response Section */}
+            {mintResult && (
+              <div className="bg-white shadow rounded-lg">
+                <div className="px-6 py-5 border-b border-gray-200">
+                  <h3 className="text-lg font-medium text-gray-900">Response</h3>
+                </div>
+                <div className="px-6 py-5">
+                  <div className="rounded-md bg-green-50 p-4">
+                    <div className="flex">
+                      <div className="flex-shrink-0">
+                        <CheckCircle className="h-5 w-5 text-green-400" />
+                      </div>
+                      <div className="ml-3">
+                        <h3 className="text-sm font-medium text-green-800">Credential Issued Successfully</h3>
+                        <div className="mt-2 text-sm text-green-700">
+                          <div className="space-y-2">
+                            <div className="flex items-center">
+                              <span className="font-medium">Transaction Hash:</span>
+                              <code className="ml-2 text-xs bg-green-100 px-2 py-1 rounded">{mintResult.transactionHash}</code>
+                              <button
+                                onClick={() => copyToClipboard(mintResult.transactionHash)}
+                                className="ml-2 text-green-600 hover:text-green-500"
+                              >
+                                <Copy size={14} />
+                              </button>
+                            </div>
+                            <div className="flex items-center">
+                              <span className="font-medium">NFT ID:</span>
+                              <code className="ml-2 text-xs bg-green-100 px-2 py-1 rounded">{mintResult.nftId}</code>
+                              <button
+                                onClick={() => copyToClipboard(mintResult.nftId)}
+                                className="ml-2 text-green-600 hover:text-green-500"
+                              >
+                                <Copy size={14} />
+                              </button>
+                            </div>
+                            <div className="flex items-center">
+                              <span className="font-medium">Asset ID:</span>
+                              <code className="ml-2 text-xs bg-green-100 px-2 py-1 rounded">{mintResult.assetId}</code>
+                              <button
+                                onClick={() => copyToClipboard(mintResult.assetId)}
+                                className="ml-2 text-green-600 hover:text-green-500"
+                              >
+                                <Copy size={14} />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -806,7 +926,7 @@ const DeveloperDashboard = () => {
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>

@@ -1,20 +1,15 @@
-# main.py  – stable version with detailed logs
-
 import os, json, uuid, hashlib, datetime, base64, unicodedata, logging, requests
 from typing import List, Annotated
 from fastapi import FastAPI, UploadFile, File, Request, Form
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import JSONResponse
 
-from db     import engine, SessionLocal
-from models import Base, Collection
-import routes_snippet                  # noqa: E402  (kept at the very end)
 # ── hard-wired credentials (YOUR current values) ───────────────────────
 API_KEY  = "a74b03a635434116af6a3f68676a8dd2"
-UID      = os.getenv("NMKR_UID")
+UID      = os.getenv("NMKR_UID", "eefeb4b8-9d30-4d69-8904-e5139e210c0b")  # Use default if not set
 ADDR     = "addr_test1qz9wg7357z5g8jmjpaqfc9q6set8g07ge5xfzggy0r6rrpgkte5s98c3y6nxkcg8fx2hmptawp9yrswlvj54fcavq2gsjljc30"
 NMKR_HDR    = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
-BF_ID    = os.getenv("BLOCKFROST_PROJECT_ID")
+BF_ID    = os.getenv("BLOCKFROST_PROJECT_ID", "preprodtHwAt3kjGk57LCCgPxMGLKzlkd9GCBw7")
 
 NMKR_HOST   = "studio-api.preprod.nmkr.io"                 # test-net
 BF_BASE_URL = "https://cardano-preprod.blockfrost.io/api/v0"
@@ -31,13 +26,7 @@ log = logging.getLogger("cert-mvp")
 
 # ── FastAPI & DB bootstrap ─────────────────────────────────────────────
 app        = FastAPI()
-app.include_router(routes_snippet.router)
 templates  = Jinja2Templates(directory="templates")
-
-@app.on_event("startup")
-async def startup_db():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
 
 # ── helpers ────────────────────────────────────────────────────────────
 def sanitize(filename: str, max_bytes: int = 32) -> str:
@@ -65,39 +54,95 @@ def bf_get(path:str):     return requests.get(f"{BF_BASE_URL}{path}", headers=bf
 
 # ── upload & mint ──────────────────────────────────────────────────────
 @app.post("/upload")
-async def upload_and_mint(file: UploadFile = File(...)):
-    data = await file.read()
-    body = {
-        "tokenname":      sanitize(file.filename),
-        "displayname":    file.filename,
-        "description":    "Proof-of-existence document",
-        "previewImageNft":{"mimetype":"image/png","fileFromBase64":TINY_PNG_B64},
-        "subfiles":[{"subfile":{
-            "mimetype":file.content_type or "application/octet-stream",
-            "fileFromBase64":base64.b64encode(data).decode()},
-            "description":file.filename}]
-    }
+async def upload_and_mint(file: UploadFile = File(...), wallet_address: str = None):
+    try:
+        # Use provided wallet address or fallback to default
+        target_address = wallet_address or ADDR
+        
+        data = await file.read()
+        body = {
+            "tokenname":      sanitize(file.filename),
+            "displayname":    file.filename,
+            "description":    "Proof-of-existence document",
+            "previewImageNft":{"mimetype":"image/png","fileFromBase64":TINY_PNG_B64},
+            "subfiles":[{"subfile":{
+                "mimetype":file.content_type or "application/octet-stream",
+                "fileFromBase64":base64.b64encode(data).decode()},
+                "description":file.filename}]
+        }
 
-    up = requests.post(UPLOAD_URL, headers=NMKR_HDR, data=json.dumps(body), timeout=90)
-    log.info("NMKR upload -> %s", up.status_code)
-    if up.status_code != 200:
-        return JSONResponse(status_code=up.status_code,
-                            content={"stage":"upload","nmkr":up.text})
+        up = requests.post(UPLOAD_URL, headers=NMKR_HDR, data=json.dumps(body), timeout=90)
+        log.info("NMKR upload -> %s", up.status_code)
+        if up.status_code != 200:
+            error_msg = up.text
+            try:
+                error_json = json.loads(error_msg)
+                error_msg = error_json.get("errorMessage", error_msg)
+            except:
+                pass
+            return JSONResponse(
+                status_code=up.status_code,
+                content={
+                    "stage": "upload",
+                    "error": error_msg,
+                    "details": "Please check your NMKR Project UID and API Key"
+                }
+            )
 
-    nft_uid = up.json().get("nftUid")
-    if not nft_uid:
-        return JSONResponse(status_code=500,
-                            content={"stage":"upload","error":"nftUid missing","raw":up.text})
+        nft_uid = up.json().get("nftUid")
+        if not nft_uid:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "stage": "upload",
+                    "error": "nftUid missing",
+                    "raw": up.text
+                }
+            )
 
-    mint = requests.get(MINT_URL(nft_uid),
-                        headers={"Authorization":f"Bearer {API_KEY}","accept":"application/json"},
-                        timeout=40)
-    log.info("NMKR mint   -> %s", mint.status_code)
-    if mint.status_code != 200:
-        return JSONResponse(status_code=mint.status_code,
-                            content={"stage":"mint","nmkr":mint.text})
+        # Update mint URL with target address
+        mint_url = f"{BASE}/MintAndSendSpecific/{UID}/{nft_uid}/1/{target_address}"
+        mint = requests.get(mint_url,
+                            headers={"Authorization":f"Bearer {API_KEY}","accept":"application/json"},
+                            timeout=40)
+        log.info("NMKR mint   -> %s", mint.status_code)
+        if mint.status_code != 200:
+            error_msg = mint.text
+            try:
+                error_json = json.loads(error_msg)
+                error_msg = error_json.get("errorMessage", error_msg)
+            except:
+                pass
+            return JSONResponse(
+                status_code=mint.status_code,
+                content={
+                    "stage": "mint",
+                    "error": error_msg,
+                    "details": "Failed to mint NFT"
+                }
+            )
 
-    return {"status":"success","upload":up.json(),"mint":mint.json()}
+        mint_data = mint.json()
+        return {
+            "status": "success",
+            "nft_asset_name": nft_uid,
+            "transaction_hash": mint_data.get("transactionHash"),
+            "wallet_address": target_address,
+            "raw": {
+                "upload": up.json(),
+                "mint": mint_data
+            }
+        }
+    except Exception as e:
+        log.error("Error in upload_and_mint: %s", str(e))
+        return JSONResponse(
+            status_code=500,
+            content={
+                "stage": "error",
+                "error": str(e),
+                "details": "An unexpected error occurred"
+            }
+        )
 
 # ── wallet NFT listing ─────────────────────────────────────────────────
 def list_wallet_nfts():
@@ -138,28 +183,6 @@ async def home(request: Request):
     return templates.TemplateResponse("home.html",
                                       {"request": request, "assets": assets})
 
-
-@app.post("/create-collection")
-async def create_collection(request:Request,
-                            selected_assets:Annotated[List[str],Form()]):
-    cid = str(uuid.uuid4())
-    async with SessionLocal() as s:
-        s.add(Collection(id=cid, asset_ids=json.dumps(selected_assets)))
-        await s.commit()
-    log.info("Collection %s saved (%d assets)", cid, len(selected_assets))
-    return {"collection":cid,"view_url":f"/collection/{cid}"}
-
-@app.get("/collection/{cid}")
-async def view_collection(request:Request, cid:str):
-    async with SessionLocal() as s:
-        res = await s.execute(select(Collection).where(Collection.id==cid))
-        col = res.scalar_one_or_none()
-    if not col:
-        return JSONResponse(status_code=404, content={"error":"collection not found"})
-    items=[bf_get(f"/assets/{aid}").json() for aid in json.loads(col.asset_ids)]
-    return templates.TemplateResponse("collection.html",
-           {"request":request,"items":items,"cid":cid})
-
 EXCLUDE_NAMES = {"tUSDM.pdf"}            # anything you never want shown
 
 def list_wallet_nfts_nmkr():
@@ -183,4 +206,4 @@ def list_wallet_nfts_nmkr():
             "media_type": "",
             "ipfs_link":  ""
         })
-    return items
+    return items 

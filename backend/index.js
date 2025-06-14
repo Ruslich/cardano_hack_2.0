@@ -37,10 +37,12 @@ app.use(session({
 const registerRouter = require('./api/register');
 const superAdminRouter = require('./api/super_admin');
 const universityRouter = require('./api/university');
+const issueCredentialRouter = require('./api/issueCredential');
 
 app.use('/api', registerRouter);
 app.use('/api', superAdminRouter);
 app.use('/api/university', universityRouter);
+app.use('/api', issueCredentialRouter);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

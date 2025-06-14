@@ -1,12 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function UniversityEmulator() {
+  const [certificates, setCertificates] = useState([]);
   const [loadingStates, setLoadingStates] = useState({});
+  const [apiToken, setApiToken] = useState(null);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    // Fetch university profile to get API token
+    const fetchUniversityProfile = async () => {
+      try {
+        const response = await fetch('http://localhost:4000/api/university/profile', {
+          credentials: 'include'
+        });
+        if (!response.ok) throw new Error('Failed to fetch university profile');
+        const data = await response.json();
+        if (data.api?.token) {
+          setApiToken(data.api.token);
+          localStorage.setItem('universityApiToken', data.api.token);
+        }
+      } catch (error) {
+        console.error('Error fetching university profile:', error);
+      }
+    };
+
+    fetchUniversityProfile();
+  }, []);
+
   // Certificate data with PDF paths
-  const certificates = [
+  const certificatesData = [
     {
       id: 1,
       type: "Enrollment Certificate",
@@ -49,21 +72,37 @@ export default function UniversityEmulator() {
       
       // 2. Prepare form data for API
       const formData = new FormData();
-      formData.append('pdf', pdfBlob, `${certificate.type.replace(/\s+/g, '_')}.pdf`);
-      formData.append('metadata', JSON.stringify({
-        studentName: certificate.studentName,
-        studentId: certificate.studentId,
-        program: certificate.program
-      }));
+      formData.append('document', pdfBlob, `${certificate.type.replace(/\s+/g, '_')}.pdf`);
+      formData.append('studentId', certificate.studentId);
+      formData.append('name', certificate.studentName);
 
-      // 3. Simulate API call (replace with actual fetch to your endpoint)
-      console.log('Submitting to API:', certificate);
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Get API token from state or localStorage
+      const token = "93eba6ca6865c236ca98169d2dec06d40f1d6f4918c9eb7ca96dbb0a804dd963" || localStorage.getItem('universityApiToken');
+      if (!token) {
+        throw new Error('API token not found. Please log in again.');
+      }
+
+      // 3. Make API call to our backend
+      const apiResponse = await fetch('http://localhost:4000/api/issue-credential', {
+        method: 'POST',
+        headers: {
+          'x-api-token': token
+        },
+        body: formData,
+        credentials: 'include', // Include cookies for authentication
+      });
+
+      if (!apiResponse.ok) {
+        const errorData = await apiResponse.json();
+        throw new Error(errorData.error || 'Failed to issue credential');
+      }
+
+      const result = await apiResponse.json();
       
-      alert(`${certificate.type} submitted for NFT conversion!`);
+      alert(`Successfully issued ${certificate.type} as NFT!\nTransaction Hash: ${result.data.transactionHash}\nNFT Asset: ${result.data.nftAssetName}`);
     } catch (error) {
       console.error('Export failed:', error);
-      alert('Failed to export certificate');
+      alert('Failed to export certificate: ' + error.message);
     } finally {
       setLoadingStates(prev => ({ ...prev, [certificate.id]: false }));
     }
@@ -82,7 +121,7 @@ export default function UniversityEmulator() {
         </div>
         
         <div className="space-y-6">
-          {certificates.map((cert) => (
+          {certificatesData.map((cert) => (
             <div key={cert.id} className="bg-white rounded-lg shadow-md overflow-hidden">
               <div className="bg-blue-50 py-3 px-6 border-t-4 border-blue-200">
                 <h2 className="text-lg font-semibold text-blue-800">

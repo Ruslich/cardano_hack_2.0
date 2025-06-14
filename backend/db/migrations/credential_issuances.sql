@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS credential_issuances (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    university_id INT NOT NULL,
+    student_id VARCHAR(50) NOT NULL,
+    student_name VARCHAR(255) NOT NULL,
+    degree VARCHAR(255) NOT NULL,
+    major VARCHAR(255) NOT NULL,
+    graduation_date DATE NOT NULL,
+    gpa DECIMAL(4,2),
+    file_path VARCHAR(255) NOT NULL,
+    status ENUM('pending', 'completed', 'failed') NOT NULL,
+    transaction_hash VARCHAR(255),
+    nft_id VARCHAR(255),
+    asset_id VARCHAR(255),
+    error_message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (university_id) REFERENCES universities(id),
+    INDEX idx_university_student (university_id, student_id),
+    INDEX idx_status (status)
+); 
