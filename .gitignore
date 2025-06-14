@@ -1,0 +1,5 @@
+.env
+
+/backend/storage/
+
+*/node_modules/

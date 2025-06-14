@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import cardanoLogo from '../assets/partners/cardano-ada-logo.png';
 import cardanoFoundationLogo from '../assets/partners/cardano-foundation-logo.svg';
 import midnightLogo from '../assets/partners/midnight.svg';
+import { Link } from 'react-router-dom';
 
 const Partners = () => {
   const partners = [
@@ -75,9 +76,9 @@ const Partners = () => {
           viewport={{ once: true }}
           className="mt-16 text-center"
         >
-          <button className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors">
+          <Link to="/contact" className="bg-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors inline-block text-center">
             Become a Partner
-          </button>
+          </Link>
         </motion.div>
       </div>
     </section>
