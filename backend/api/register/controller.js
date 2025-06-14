@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const pool = require('../../db');
+const path = require('path');
 
 exports.registerUniversity = async (req, res) => {
   try {
@@ -30,13 +31,15 @@ exports.registerUniversity = async (req, res) => {
       // Insert university
       const universityUuid = uuidv4();
       const [uniResult] = await conn.execute(
-        `INSERT INTO universities (uuid, name, domain, country, accreditation_id, authorized_confirmed, terms_accepted, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW(), NOW())`,
+        `INSERT INTO universities (uuid, name, domain, country, accreditation_id, accreditation_file_path, authorization_file_path, authorized_confirmed, terms_accepted, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW(), NOW())`,
         [
           universityUuid,
           institutionName,
           domain,
           country,
           accreditationId || null,
+          path.join('backend', 'storage', letterFile.filename),
+          path.join('backend', 'storage', certificateFile.filename),
           authorizedAccepted ? 1 : 0,
           termsAccepted ? 1 : 0
         ]

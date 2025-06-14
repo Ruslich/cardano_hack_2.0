@@ -11,6 +11,8 @@ import Team from './components/Team';
 import Footer from './components/Footer';
 import Contact from './components/Contact';
 import RegisterUniversity from './components/register/RegisterUniversity';
+import SuperAdminLogin from './components/super_admin/SuperAdminLogin';
+import SuperAdminDashboard from './components/super_admin/SuperAdminDashboard';
 
 function App() {
   return (
@@ -43,6 +45,8 @@ function App() {
             </>
           } />
           <Route path="/register" element={<RegisterUniversity />} />
+          <Route path="/super-admin/login" element={<SuperAdminLogin />} />
+          <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
         </Routes>
       </div>
     </Router>

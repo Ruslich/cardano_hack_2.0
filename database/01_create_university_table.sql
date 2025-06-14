@@ -6,6 +6,8 @@ CREATE TABLE universities (
     domain VARCHAR(255),
     country VARCHAR(100),
     accreditation_id VARCHAR(100),
+    accreditation_file_path VARCHAR(255),
+    authorization_file_path VARCHAR(255),
     authorized_confirmed TINYINT(1) NOT NULL DEFAULT 0,
     terms_accepted TINYINT(1) NOT NULL DEFAULT 0,
     status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
