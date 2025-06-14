@@ -1,6 +1,6 @@
 # 🎓 Blockchain Credential Verification System
 
-> Built during the NMKR & Cardano Hackathon 2024
+> Built during the NMKR & Cardano Hackathon 2025
 
 ---
 
