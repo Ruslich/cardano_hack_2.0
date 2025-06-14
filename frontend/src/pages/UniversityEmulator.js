@@ -1,35 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function UniversityEmulator() {
-  const [certificates, setCertificates] = useState([]);
   const [loadingStates, setLoadingStates] = useState({});
-  const [apiToken, setApiToken] = useState(null);
+  const [showWalletPopup, setShowWalletPopup] = useState(false);
+  const [walletAddress, setWalletAddress] = useState('');
+  const [currentCertificate, setCurrentCertificate] = useState(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Fetch university profile to get API token
-    const fetchUniversityProfile = async () => {
-      try {
-        const response = await fetch('http://localhost:4000/api/university/profile', {
-          credentials: 'include'
-        });
-        if (!response.ok) throw new Error('Failed to fetch university profile');
-        const data = await response.json();
-        if (data.api?.token) {
-          setApiToken(data.api.token);
-          localStorage.setItem('universityApiToken', data.api.token);
-        }
-      } catch (error) {
-        console.error('Error fetching university profile:', error);
-      }
-    };
-
-    fetchUniversityProfile();
-  }, []);
-
   // Certificate data with PDF paths
-  const certificatesData = [
+  const certificates = [
     {
       id: 1,
       type: "Enrollment Certificate",
@@ -62,54 +44,139 @@ export default function UniversityEmulator() {
     }
   ];
 
-  const handleExportAsNFT = async (certificate) => {
-    setLoadingStates(prev => ({ ...prev, [certificate.id]: true }));
+  const handleExportClick = (certificate) => {
+    setCurrentCertificate(certificate);
+    setShowWalletPopup(true);
+  };
+
+  const handleExportAsNFT = async () => {
+    if (!walletAddress || !currentCertificate) return;
+    
+    // Basic wallet address validation
+    if (!/^(addr1|[0-9a-zA-Z])/.test(walletAddress)) {
+      alert('Please enter a valid wallet address (starts with addr1 for Cardano)');
+      return;
+    }
+
+    setLoadingStates(prev => ({ ...prev, [currentCertificate.id]: true }));
+    setShowWalletPopup(false);
     
     try {
       // 1. Get the PDF data to send to API
-      const response = await fetch(certificate.pdfPath);
+      const response = await fetch(currentCertificate.pdfPath);
       const pdfBlob = await response.blob();
       
       // 2. Prepare form data for API
       const formData = new FormData();
-      formData.append('document', pdfBlob, `${certificate.type.replace(/\s+/g, '_')}.pdf`);
-      formData.append('studentId', certificate.studentId);
-      formData.append('name', certificate.studentName);
+      formData.append('pdf', pdfBlob, `${currentCertificate.type.replace(/\s+/g, '_')}.pdf`);
+      formData.append('metadata', JSON.stringify({
+        studentName: currentCertificate.studentName,
+        studentId: currentCertificate.studentId,
+        program: currentCertificate.program,
+        walletAddress: walletAddress
+      }));
 
-      // Get API token from state or localStorage
-      const token = "93eba6ca6865c236ca98169d2dec06d40f1d6f4918c9eb7ca96dbb0a804dd963" || localStorage.getItem('universityApiToken');
-      if (!token) {
-        throw new Error('API token not found. Please log in again.');
-      }
-
-      // 3. Make API call to our backend
-      const apiResponse = await fetch('http://localhost:4000/api/issue-credential', {
-        method: 'POST',
-        headers: {
-          'x-api-token': token
-        },
-        body: formData,
-        credentials: 'include', // Include cookies for authentication
+      // 3. Simulate API call (replace with actual fetch to your endpoint)
+      console.log('Submitting to API:', {
+        certificate: currentCertificate,
+        walletAddress
       });
-
-      if (!apiResponse.ok) {
-        const errorData = await apiResponse.json();
-        throw new Error(errorData.error || 'Failed to issue credential');
-      }
-
-      const result = await apiResponse.json();
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
-      alert(`Successfully issued ${certificate.type} as NFT!\nTransaction Hash: ${result.data.transactionHash}\nNFT Asset: ${result.data.nftAssetName}`);
+      // Show beautiful success message
+      setSuccessMessage(`
+        ${currentCertificate.type} successfully sent to the wallet!
+        ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}
+      `);
+      setShowSuccess(true);
+      
+      // Auto-hide after 5 seconds
+      setTimeout(() => setShowSuccess(false), 5000);
+      
     } catch (error) {
       console.error('Export failed:', error);
-      alert('Failed to export certificate: ' + error.message);
+      alert('Failed to export certificate');
     } finally {
-      setLoadingStates(prev => ({ ...prev, [certificate.id]: false }));
+      setLoadingStates(prev => ({ ...prev, [currentCertificate.id]: false }));
+      setWalletAddress('');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-8 relative">
+      {/* Beautiful Success Notification */}
+      {showSuccess && (
+        <div className="fixed top-4 right-4 z-50 animate-fade-in">
+          <div className="bg-green-50 border border-green-200 rounded-lg shadow-lg p-4 w-64">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-green-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-green-800">Successfully sent!</h3>
+                <div className="mt-1 text-xs text-green-700">
+                  <p>{successMessage.split('\n')[0].trim()}</p>
+                  <p className="font-mono mt-1">{successMessage.split('\n')[1].trim()}</p>
+                </div>
+                <div className="mt-2">
+                  <button
+                    onClick={() => setShowSuccess(false)}
+                    className="text-xs text-green-600 hover:text-green-500"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Wallet Address Popup */}
+      {showWalletPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-xl">
+            <h3 className="text-lg font-bold mb-4">Send NFT to Wallet</h3>
+            <div className="mb-4">
+              <label htmlFor="walletAddress" className="block text-sm font-medium text-gray-700 mb-1">
+                Recipient's wallet address:
+              </label>
+              <input
+                type="text"
+                id="walletAddress"
+                value={walletAddress}
+                onChange={(e) => setWalletAddress(e.target.value)}
+                placeholder="addr1q9... (Cardano)"
+                className="w-full p-3 border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                For Cardano: starts with "addr1"
+              </p>
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowWalletPopup(false);
+                  setWalletAddress('');
+                }}
+                className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleExportAsNFT}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Confirm & Send
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content */}
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-blue-800">
@@ -121,7 +188,7 @@ export default function UniversityEmulator() {
         </div>
         
         <div className="space-y-6">
-          {certificatesData.map((cert) => (
+          {certificates.map((cert) => (
             <div key={cert.id} className="bg-white rounded-lg shadow-md overflow-hidden">
               <div className="bg-blue-50 py-3 px-6 border-t-4 border-blue-200">
                 <h2 className="text-lg font-semibold text-blue-800">
@@ -166,7 +233,7 @@ export default function UniversityEmulator() {
 
               <div className="px-6 pb-6">
                 <button
-                  onClick={() => handleExportAsNFT(cert)}
+                  onClick={() => handleExportClick(cert)}
                   disabled={loadingStates[cert.id]}
                   className={`w-full py-2 px-4 rounded-md font-medium text-white ${
                     loadingStates[cert.id] ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
