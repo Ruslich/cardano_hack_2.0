@@ -5,36 +5,36 @@ import { Link } from 'react-router-dom';
 const Team = () => {
   const teamMembers = [
     {
-      name: "John Doe",
-      role: "Blockchain Engineer",
-      focus: "Cardano Smart Contracts, CIP-68",
-      image: "https://via.placeholder.com/150",
-      linkedin: "https://linkedin.com/in/johndoe",
-      github: "https://github.com/johndoe"
+      name: "Ali Guliyev",
+      //role: "Blockchain Engineer",
+      //focus: "Cardano Smart Contracts, CIP-68",
+      image: require('../assets/images/ali picture.jfif'),
+      linkedin: "https://www.linkedin.com/in/ali-guliyev-389837238/",
+      github: "https://github.com/CoraEpiro"
     },
     {
-      name: "Jane Smith",
-      role: "Backend Lead",
-      focus: "API, Security, Data Privacy",
-      image: "https://via.placeholder.com/150",
-      linkedin: "https://linkedin.com/in/janesmith",
-      github: "https://github.com/janesmith"
+      name: "Ruslan Tsibirov",
+      //role: "Backend Lead",
+      //focus: "API, Security, Data Privacy",
+      image: require('../assets/images/ruslan picture.jfif'),
+      linkedin: "https://www.linkedin.com/in/ruslantsibirov/",
+      github: "https://github.com/Ruslich"
     },
     {
-      name: "Mike Brown",
-      role: "Business Lead",
-      focus: "University Partnerships",
-      image: "https://via.placeholder.com/150",
-      linkedin: "https://linkedin.com/in/mikebrown",
-      github: "https://github.com/mikebrown"
+      name: "Veronika Rybak",
+      //role: "Business Lead",
+      //focus: "University Partnerships",
+      image: require('../assets/images/nika picture1.jpg'),
+      linkedin: "https://www.linkedin.com/in/veronika-rybak-55379a337/",
+      github: "https://github.com/vrnccr"
     },
     {
-      name: "Anna White",
-      role: "UX/UI Designer",
-      focus: "User Experience & Product Design",
-      image: "https://via.placeholder.com/150",
-      linkedin: "https://linkedin.com/in/annawhite",
-      github: "https://github.com/annawhite"
+      name: "Denis Hoti",
+      //role: "UX/UI Designer",
+      //focus: "User Experience & Product Design",
+      image: require('../assets/images/denis picture.jfif'),
+      linkedin: "https://www.linkedin.com/in/denishoti/",
+      github: "https://github.com/denishotii"
     }
   ];
 
@@ -70,7 +70,7 @@ const Team = () => {
                 <img
                   src={member.image}
                   alt={member.name}
-                  className="w-full h-48 object-cover"
+                  className="w-full h-48 object-cover object-[center_30%]"
                 />
               </div>
               <div className="p-6">
