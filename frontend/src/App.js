@@ -16,6 +16,7 @@ import SuperAdminDashboard from './components/super_admin/SuperAdminDashboard';
 import Login from './components/register/Login';
 import DeveloperDashboard from './components/university/DeveloperDashboard';
 import { Toaster } from 'react-hot-toast';
+import UniversityEmulator from './pages/UniversityEmulator';
 
 function App() {
   return (
@@ -53,6 +54,7 @@ function App() {
           <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
           <Route path="/university/login" element={<Login />} />
           <Route path="/university/dashboard" element={<DeveloperDashboard />} />
+          <Route path="/university-emulator" element={<UniversityEmulator />} />
         </Routes>
       </div>
     </Router>
