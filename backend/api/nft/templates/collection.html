@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+<head><title>Shared bundle {{ cid }}</title></head>
+<body>
+<h3>Documents in this bundle</h3>
+<ul>
+  {% for it in items %}
+    <li>
+      {{ it.onchain_metadata.name }}
+      <a href="https://ipfs.io/ipfs/{{ it.onchain_metadata.files[0].src.split('ipfs://')[1] }}" target="_blank">
+        (download)
+      </a>
+    </li>
+  {% endfor %}
+</ul>
+</body>
+</html>

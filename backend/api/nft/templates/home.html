@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+<head><title>Your wallet</title></head>
+<body>
+  <h3>Select documents</h3>
+  <form action="/collection/new" method="post">
+    {% for nft in assets %}
+      <label><input type="checkbox" name="selected_assets" value="{{ nft.asset_id }}">
+        {{ nft.name or nft.file_name }}
+      </label><br>
+    {% else %}
+      <em>No NFTs found.</em>
+    {% endfor %}
+
+    <button type="submit">Generate share-link</button>
+  </form>
+</body>
+</html>

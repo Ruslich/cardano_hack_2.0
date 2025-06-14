@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Documents</title>
+</head>
+<body>
+    <h2>Available Documents</h2>
+    <form method="post" action="/create-collection">
+        {% for asset in assets %}
+            <input type="checkbox" name="selected_assets" value="{{ asset.asset_id }}">
+            {{ asset.file_name }} ({{ asset.media_type }})<br>
+        {% endfor %}
+        <br>
+        <button type="submit">Create Master NFT</button>
+    </form>
+</body>
+</html>
